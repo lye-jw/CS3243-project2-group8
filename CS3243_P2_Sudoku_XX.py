@@ -10,68 +10,74 @@ class Sudoku(object):
         self.puzzle = puzzle # self.puzzle is a list of lists
         self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
         self.domains = list()
-        self.unassignedVars = set()
+        self.unassigned_vars = set()
 
     def solve(self):
-        self.initDomains()
+        self.init_domains()
         self.backtrack()
         print(puzzle)
         return self.ans
+    
     def backtrack(self):
-        if len(self.unassignedVars) == 0:
+        if len(self.unassigned_vars) == 0:
             return True
 
         #variable selection
-        currVar = self.mostConstrVar(self.unassignedVars)
+        curr_var = self.most_constr_var(self.unassigned_vars)
         #value selection
-        domain = self.varDomain(self.domains,currVar)
+        domain = self.var_domain(self.domains,curr_var)
 
         for index in range(9):
             if domain[index] == 1:
-                self.assignVal(currVar,index+1)
-                if self.validCheck(currVar,index+1) == False:
-                    self.unassignVal(currVar,index+1)
-                    continue
-                if self.backtrack() == False:                    
-                    self.unassignVal(currVar,index+1)
-                    continue
+                self.assign_val(curr_var, index+1)
+                if self.constraints_check(curr_var, index+1):
+                    forwardcheck_succeeds = self.forward_checking(curr_var, index + 1)
                 else:
+                    self.unassign_val(curr_var, index+1)
+                    continue
+
+                if forwardcheck_succeeds and self.backtrack():
                     return True
-            else:
-                continue
+                else:
+                    self.unassign_val(curr_var, index+1)
 
         #add back to unassigned                
-        self.unassignedVars.add(currVar)
+        self.unassigned_vars.add(curr_var)
         return False
-    def mostConstrVar(self,unassignedVars):
-        MCV = unassignedVars.pop()
+    
+    def most_constr_var(self,unassigned_vars):
+        MCV = unassigned_vars.pop()
         return MCV
-    def varDomain(self,domainList,currVar):
-        varIndex = currVar[0]*9 + currVar[1]
-        currDomain = self.domains[varIndex]
-        return currDomain
-    def assignVal(self,currVar,value):
-        self.puzzle[currVar[0]][currVar[1]] = value
+    
+    def var_domain(self,domainlist,curr_var):
+        var_index = curr_var[0]*9 + curr_var[1]
+        curr_domain = self.domains[var_index]
+        return curr_domain
+    
+    def assign_val(self,curr_var,value):
+        self.puzzle[curr_var[0]][curr_var[1]] = value
         return 1
-    def unassignVal(self,currVar,value):
-        self.puzzle[currVar[0]][currVar[1]] = 0
+    
+    def unassign_val(self,curr_var,value):
+        self.puzzle[curr_var[0]][curr_var[1]] = 0
         return 1
-    def initDomains(self):
-        domainSet = [1,1,1,1,1,1,1,1,1]
+    
+    def init_domains(self):
+        domainset = [1,1,1,1,1,1,1,1,1]
         for row in range(9):
             for col in range(9):
-                self.domains.append(copy.copy(domainSet))
+                self.domains.append(copy.copy(domainset))
                 if self.puzzle[row][col] == 0:
-                    self.unassignedVars.add((row,col))
+                    self.unassigned_vars.add((row,col))
         for row in range(9):
             for col in range(9):
                 if self.puzzle[row][col] != 0:           
                     pass
         return 1
 
-    def validCheck(self,currVar,value):
-        row = currVar[0]
-        col = currVar[1]
+    def constraints_check(self,curr_var,value):
+        row = curr_var[0]
+        col = curr_var[1]
         for c in range(9):
             if c != col:
                 if self.puzzle[row][c] == value:
@@ -83,15 +89,53 @@ class Sudoku(object):
         layers = [[0,1,2],[3,4,5],[6,7,8]]
         for layer in layers:
             if row in layer:
-                neighbourRow = layer
+                neighbour_row = layer
             if col in layer:
-                neighbourCol = layer 
-        for sqRow in neighbourRow:
-            for sqCol in neighbourCol:
-                if sqRow != row or sqCol != col:
-                    if self.puzzle[sqRow][sqCol] == value:
+                neighbour_col = layer
+        for sqrow in neighbour_row:
+            for sqcol in neighbour_col:
+                if sqrow != row or sqcol != col:
+                    if self.puzzle[sqrow][sqcol] == value:
                         return False
-        return True         
+        return True
+
+    def forward_checking(self, curr_var, value):
+        row = curr_var[0]
+        col = curr_var[1]
+
+        # Remove value from domain of var in same column
+        for c in range(9):
+            if c != col:
+                if not self.reduce_var(row, c, value):
+                    return False
+
+        # Remove value from domain of var in same row
+        for r in range(9):
+            if r != row:
+                if not self.reduce_var(r, col, value):
+                    return False
+
+        layers = [[0,1,2],[3,4,5],[6,7,8]]
+        for layer in layers:
+            if row in layer:
+                neighbour_row = layer
+            if col in layer:
+                neighbour_row = layer 
+        for sqrow in neighbour_row:
+            for sqcol in neighbour_col:
+                if sqrow != row or sqcol != col:
+                    if not self.reduce_var(sqrow, sqcol, value]:
+                        return False
+        return True
+
+    def reduce_var(row, col, value):
+        reducedvar = self.domains[row * 9 + col]
+        reducedvar[value] = 0
+        if reducedvar:
+            return True
+        else:
+            return False
+    
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY
     # Note that our evaluation scripts only call the solve method.
