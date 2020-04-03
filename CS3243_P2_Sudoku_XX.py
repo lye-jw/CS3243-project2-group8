@@ -11,6 +11,7 @@ class Sudoku(object):
         self.ans = copy.deepcopy(puzzle) # self.ans is a list of lists
         self.domains = list()
         self.unassigned_vars = set()
+        self.reduced_vars = []
 
     def solve(self):
         self.init_domains()
@@ -40,6 +41,7 @@ class Sudoku(object):
                     return True
                 else:
                     self.unassign_val(curr_var, index+1)
+                    self.undo_last_forwardcheck()
 
         #add back to unassigned                
         self.unassigned_vars.add(curr_var)
@@ -129,12 +131,22 @@ class Sudoku(object):
         return True
 
     def reduce_var(row, col, value):
-        reducedvar = self.domains[row * 9 + col]
+        reduce_ind = row * 9 + col
+        reducedvar = self.domains[reduce_ind]
         reducedvar[value] = 0
+        self.reduced_vars.append((row, col, value))
         if reducedvar:
             return True
         else:
             return False
+
+    def undo_last_forwardcheck():
+        last_reduced_var = self.reduced_vars.pop()
+        row = last_reduced_var[0]
+        col = last_reduced_var[1]
+        removed_val = last_reduced_var[2]
+        reduce_ind = row * 9 + col
+        self.domains[reduce_ind][removed_val] = 1
     
     # you may add more classes/functions if you think is useful
     # However, ensure all the classes/functions are in this file ONLY
